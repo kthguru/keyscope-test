@@ -1,0 +1,92 @@
+/*
+ * Copyright 2025-2026 Infradise Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'ui/connection/connection_dialog.dart';
+import 'ui/connection/repository/connection_repository.dart';
+
+/// The root widget of the application.
+/// Responsible for setting up the MaterialApp, Theme, and Routing.
+class KeyscopeApp extends ConsumerWidget {
+  const KeyscopeApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
+        title: 'Keyscope',
+        debugShowCheckedModeBanner: false,
+        // Apply a Dark Theme
+        theme: ThemeData.dark(useMaterial3: true).copyWith(
+          scaffoldBackgroundColor: const Color(0xFF1E1F22),
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFF3574F0), // Keyscope Blue
+            surface: Color(0xFF2B2D30),
+          ),
+          // Set the home screen to a separate widget to ensure a valid Context.
+          // Setup Dialog Theme globally
+          // dialogTheme: DialogTheme(
+          //   backgroundColor: const Color(0xFF2B2D30),
+          //   shape: RoundedRectangleBorder(
+          //     borderRadius: BorderRadius.circular(8)
+          //   ),
+          // ),
+        ),
+        home: const HomeScreen(),
+      );
+}
+
+/// The main screen of the application.
+/// This widget is a child of MaterialApp, so it can access
+/// MaterialLocalizations.
+class HomeScreen extends ConsumerWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the injected repository implementation.
+    final repo = ref.watch(connectionRepositoryProvider);
+
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Keyscope',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            // Should print 'false' in OSS version.
+            Text('SSH Supported: ${repo.isSshSupported}'),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () {
+                // repo.connect(host: 'localhost', port: 6379);
+                showDialog<Dialog>(
+                  context: context,
+                  builder: (context) => const ConnectionDialog(),
+                );
+              },
+              // child: const Text('Test Connection'),
+              child: const Text('Open Connection Manager'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,38 @@
+# Ignore hidden files and directories
+.git/
+.github/
+.idea/
+.vscode/
+.dart_tool/
+.DS_Store
+
+# Ignore build artifacts
+build/
+pubspec.lock
+
+# 3. Example folder cleanup
+/.dart_tool/
+/.idea/
+/android/
+/build/
+/ios/
+/linux/
+/macos/
+/web/
+/windows/
+/.gitignore
+/.metadata
+# analysis_options.yaml
+/keyscope.iml
+/pubspec.lock
+
+# Ignore documentation assets that are too large
+docs/images/keyscope.png
+
+# Ignore test coverage reports
+coverage/
+
+# No assets
+assets/icons
+assets/images
+test/widget_test.dart
