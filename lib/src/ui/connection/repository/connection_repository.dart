@@ -17,6 +17,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valkey_client/valkey_client.dart';
 
+/// A DTO to hold the result of a SCAN operation.
+class ScanResult {
+  final String cursor;
+  final List<String> keys;
+
+  ScanResult(this.cursor, this.keys);
+}
+
 /// Abstract class defining the contract for connection operations.
 ///
 /// This repository handles the low-level connection logic to Redis/Valkey servers.
@@ -35,6 +43,16 @@ abstract class ConnectionRepository {
 
   /// Fetches server information using the INFO command.
   Future<Map<String, String>> getInfo();
+
+  /// Scans keys incrementally to avoid blocking the server.
+  /// [cursor]: The cursor to start from (use '0' for the start).
+  /// [match]: The pattern to match (default '*').
+  /// [count]: Approximate number of keys to return per batch.
+  Future<ScanResult> scanKeys({
+    required String cursor,
+    String match = '*',
+    int count = 100,
+  });
 
   /// Closes the current connection.
   Future<void> disconnect();
@@ -126,6 +144,7 @@ class BasicConnectionRepository implements ConnectionRepository {
     }
   }
 
+  /// Helper for getInfo
   Map<String, String> _parseInfo(String rawInfo) {
     final infoMap = <String, String>{};
     final lines = rawInfo.split('\r\n');
@@ -149,6 +168,40 @@ class BasicConnectionRepository implements ConnectionRepository {
       }
     }
     return infoMap;
+  }
+
+  // TODO: Same with `core`. Need to dedup and use valkey_client.
+  @override
+  Future<ScanResult> scanKeys({
+    required String cursor,
+    String match = '*',
+    int count = 100,
+  }) async {
+    if (_client == null) throw Exception('Not connected');
+
+    try {
+      // Execute SCAN command: SCAN <cursor> MATCH <pattern> COUNT <count>
+      final result = await _client!
+          .execute(['SCAN', cursor, 'MATCH', match, 'COUNT', count.toString()]);
+
+      // Result is typically a list: [nextCursor, [key1, key2, ...]]
+      if (result is List && result.length == 2) {
+        final nextCursor = result[0].toString();
+        final rawKeys = result[1];
+
+        var keys = <String>[];
+        if (rawKeys is List) {
+          keys = rawKeys.map((e) => e.toString()).toList();
+        }
+
+        return ScanResult(nextCursor, keys);
+      } else {
+        throw Exception('Unexpected SCAN response format');
+      }
+    } catch (e) {
+      print('❌ [OSS] Failed to SCAN keys: $e');
+      rethrow;
+    }
   }
 
   @override
