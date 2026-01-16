@@ -25,9 +25,9 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 # [CLI Configuration]
-# Maps the 'keyscope' command to 'bin/main.dart'
+# Maps the 'keyscope' command to 'bin/keyscope.dart'
 executables:
-  keyscope: main
+  keyscope: keyscope
 
 dependencies:
   args: ^2.7.0 # Add this for CLI argument parsing
