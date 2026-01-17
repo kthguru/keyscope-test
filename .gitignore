@@ -17,6 +17,10 @@ migrate_working_dir/
 macOS/Podfile.lock
 macOS/Flutter/GeneratedPluginRegistrant.swift
 
+# Ignore CLI related generated files
+bin/keyscope/bundle/bin/keyscope
+bin/keyscope/bundle/lib/objective_c.dylib
+
 # IntelliJ related
 *.iml
 *.ipr
