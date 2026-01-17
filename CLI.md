@@ -8,6 +8,27 @@ Keyscope includes a built-in CLI tool for diagnosing connectivity issues with Re
 dart pub global activate --source path .
 ```
 
+Use this:
+```sh
+keyscope --help
+```
+
+## Non-installation
+
+```sh
+dart build cli --target=bin/keyscope.dart -o bin/keyscope
+```
+
+Generated files on macOS:
+```sh
+# bin/keyscope/bundle/bin/keyscope
+# bin/keyscope/bundle/lib/objective_c.dylib
+```
+
+```sh
+./bin/keyscope/bundle/bin/keyscope --help
+```
+
 ## Usage
 
 Check connection status (PING):
