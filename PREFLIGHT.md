@@ -14,6 +14,7 @@ Check for static errors, warnings, and lints to ensure code quality and adherenc
 
 ```sh
 dart analyze
+flutter analyze
 ```
 
 Apply the linter rules
