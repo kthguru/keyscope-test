@@ -17,6 +17,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valkey_client/valkey_client.dart';
 
+// import '../../../core/keyscope_client.dart' show KeyscopeClient;
+// import '../../../../src/core/keyscope_client.dart';
+
 /// A DTO to hold the result of a SCAN operation.
 class ScanResult {
   final String cursor;
@@ -28,10 +31,17 @@ class ScanResult {
 /// Abstract class defining the contract for connection operations.
 ///
 /// This repository handles the low-level connection logic to Redis/Valkey servers.
+//
 abstract class ConnectionRepository {
   /// The active client instance.
   /// Returns [ValkeyClient] or null if not connected.
-  ValkeyClient? get client;
+  ValkeyClient? get _client;
+
+  // final KeyscopeClient _client = KeyscopeClient();
+  // Expose the raw client (optional)
+  // ValkeyClient? get rawClient => _client.rawClient;
+
+  bool get isConnected => _client?.isConnected ?? false;
 
   /// Establishes a connection to the specified host and port.
   Future<void> connect({
@@ -39,10 +49,23 @@ abstract class ConnectionRepository {
     required int port,
     String? username,
     String? password,
-  });
+  }) async {
+    // UI-specific logging can stay here
+    print('🔌 [GUI] Connecting to $host:$port...');
+    await _client?.connect(
+      host: host,
+      port: port,
+      username: username,
+      password: password,
+    );
+    print('✅ [GUI] Connected.');
+  }
 
   /// Fetches server information using the INFO command.
-  Future<Map<String, String>> getInfo();
+  Future<Map<String, String>> getInfo() async => {};
+  // {
+  //   throw UnimplementedError('');
+  // }
 
   /// Scans keys incrementally to avoid blocking the server.
   /// [cursor]: The cursor to start from (use '0' for the start).
@@ -66,10 +89,12 @@ abstract class ConnectionRepository {
 /// This implementation provides basic connectivity without advanced Enterprise
 /// features like SSH Tunneling or dedicated support.
 class BasicConnectionRepository implements ConnectionRepository {
-  ValkeyClient? _client;
+  @override
+  ValkeyClient? _client = ValkeyClient();
+  // KeyscopeClient _client = KeyscopeClient();
 
   @override
-  ValkeyClient? get client => _client;
+  bool get isConnected => _client?.isConnected ?? false;
 
   @override
   Future<void> connect({
@@ -202,6 +227,8 @@ class BasicConnectionRepository implements ConnectionRepository {
       print('❌ [OSS] Failed to SCAN keys: $e');
       rethrow;
     }
+
+    // return _client.scanKeys(cursor: cursor, match: match, count: count);
   }
 
   @override
@@ -212,6 +239,10 @@ class BasicConnectionRepository implements ConnectionRepository {
       print('🔌 [OSS] Disconnected.');
     }
   }
+
+  // Future<void> disconnect() async {
+  //   await _client.disconnect();
+  // }
 
   @override
   bool get isSshSupported => false;
@@ -229,4 +260,6 @@ final connectionRepositoryProvider = Provider<ConnectionRepository>((ref) {
     // Resources are typically cleaned up by the UI or explicit disconnect
   });
   return BasicConnectionRepository();
+
+  // return ConnectionRepository();
 });
