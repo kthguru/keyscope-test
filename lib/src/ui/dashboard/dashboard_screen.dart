@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../browser/key_browser_screen.dart' show KeyBrowserScreen;
 import '../connection/repository/connection_repository.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -46,6 +47,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         appBar: AppBar(
           title: const Text('Dashboard'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.list_alt),
+              tooltip: 'Data Explorer',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<DashboardScreen>(
+                      builder: (context) => const KeyBrowserScreen()),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _refresh,
