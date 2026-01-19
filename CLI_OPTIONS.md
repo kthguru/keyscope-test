@@ -17,15 +17,31 @@ keyscope --ping
 ## `--set`
 
 ```sh
-keyscope --set key value
+keyscope --set my_key my_value
+```
+OR
+```sh
+keyscope set --key my_key --value my_value
+```
+OR
+```sh
+keyscope set -k my_key -v my_value
 ```
 
 ## `--get`
 
-Returns `value`
+Returns `my_value`
 
 ```sh
-keyscope --get key
+keyscope --get my_key
+```
+OR
+```sh
+keyscope get --key my_key
+```
+OR
+```sh
+keyscope get -k my_key
 ```
 
 ## `--scan`
