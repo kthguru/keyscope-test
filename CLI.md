@@ -15,6 +15,19 @@ keyscope --help
 
 ## Non-installation
 
+### Dart Run
+```sh
+dart run bin/keyscope.dart
+```
+
+```
+dart run bin/keyscope.dart --help
+```
+
+Or,
+
+### Dart Build 
+
 ```sh
 dart build cli --target=bin/keyscope.dart -o bin/keyscope
 ```
