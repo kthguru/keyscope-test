@@ -40,8 +40,14 @@ test/widget_test.dart
 # No docs
 PREFLIGHT.md
 CONTRIBUTING.md
-CLI.md
 analysis_options.yaml
+
+# No CLI docs
+CLI.md
+CLI_OPTIONS.md
+
+# No setup
+setup.dart
 
 # Ignore CLI related generated files
 bin/keyscope/
