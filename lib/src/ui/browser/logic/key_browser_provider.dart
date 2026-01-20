@@ -65,6 +65,7 @@ class KeyBrowserController extends StateNotifier<KeyBrowserState> {
       // Start from cursor 0
       final result =
           await _repository.scanKeys(cursor: '0', match: pattern, count: 50);
+      // TODO: add this to user-defined preferences
 
       state = state.copyWith(
         isLoading: false,

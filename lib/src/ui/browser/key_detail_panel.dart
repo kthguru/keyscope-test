@@ -25,14 +25,43 @@ final keyDetailProvider =
   return repo.getKeyDetail(key);
 });
 
-class KeyDetailPanel extends ConsumerWidget {
+class KeyDetailPanel extends ConsumerStatefulWidget {
   final String? selectedKey;
 
   const KeyDetailPanel({super.key, required this.selectedKey});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (selectedKey == null) {
+  ConsumerState<KeyDetailPanel> createState() => _KeyDetailPanelState();
+}
+
+class _KeyDetailPanelState extends ConsumerState<KeyDetailPanel> {
+  bool _isEditing = false;
+  late TextEditingController _valueController;
+
+  @override
+  void initState() {
+    super.initState();
+    _valueController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  // Exit editing mode automatically when the selected key changes
+  @override
+  void didUpdateWidget(covariant KeyDetailPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedKey != widget.selectedKey) {
+      _isEditing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.selectedKey == null) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -47,7 +76,7 @@ class KeyDetailPanel extends ConsumerWidget {
       );
     }
 
-    final asyncValue = ref.watch(keyDetailProvider(selectedKey!));
+    final asyncValue = ref.watch(keyDetailProvider(widget.selectedKey!));
 
     return Container(
       color: const Color(0xFF1E1F22), // Editor BG
@@ -56,23 +85,32 @@ class KeyDetailPanel extends ConsumerWidget {
         error: (err, stack) => Center(
             child:
                 Text('Error: $err', style: const TextStyle(color: Colors.red))),
-        // data: (detail) => _buildDetailView(detail),
-        data: _buildDetailView,
+        // data: _buildDetailView,
+        data: (detail) {
+          // Initialize controller value only once when entering edit mode
+          if (_isEditing &&
+              _valueController.text.isEmpty &&
+              detail.value is String) {
+            _valueController.text = detail.value.toString();
+          }
+          return _buildDetailView(detail);
+        },
       ),
     );
   }
 
   Widget _buildDetailView(KeyDetail detail) => Column(
         children: [
-          // [Header] Key Name, Type, TTL
+          // [Header] Key Name, Type, TTL, Actions Toolbar
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12), // 16
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: Color(0xFF3F4246))),
               color: Color(0xFF2B2D30),
             ),
             child: Row(
               children: [
+                // Type Badge
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -85,13 +123,12 @@ class KeyDetailPanel extends ConsumerWidget {
                           fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
                 const SizedBox(width: 12),
+                // Key Name
                 Expanded(
-                  child: Text(
-                    detail.key,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: Text(detail.key,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis),
                 ),
                 const Icon(Icons.timer, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),
@@ -99,23 +136,76 @@ class KeyDetailPanel extends ConsumerWidget {
                   detail.ttl == -1 ? 'Forever' : '${detail.ttl}s',
                   style: const TextStyle(color: Colors.grey),
                 ),
+                // Actions: Edit/Save (Only for String type in v0.4.0)
+                if (detail.type == 'string') ...[
+                  IconButton(
+                    icon: Icon(_isEditing ? Icons.save : Icons.edit),
+                    tooltip: _isEditing ? 'Save Changes' : 'Edit Value',
+                    color: _isEditing ? Colors.green : Colors.grey,
+                    onPressed: () => _handleEdit(detail),
+                  ),
+                  if (_isEditing)
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Cancel',
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = false;
+                          _valueController.clear();
+                        });
+                      },
+                    ),
+                ],
+                const SizedBox(width: 8),
+                // Action: Delete
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  color: Colors.red,
+                  tooltip: 'Delete Key',
+                  onPressed: () => _handleDelete(detail.key),
+                ),
               ],
             ),
           ),
 
-          // [Body] Value Viewer
+          // [Body] Value Viewer -- v0.3.x
+          // Expanded(
+          //   child: SingleChildScrollView(
+          //     padding: const EdgeInsets.all(16),
+          //     child: SizedBox(
+          //       width: double.infinity,
+          //       child: _buildValueContent(detail), // full
+          //     ),
+          //   ),
+          // ),
+
+          // [Body] Value Editor / Viewer -- v0.4.0
           Expanded(
-            child: SingleChildScrollView(
+            // child: SingleChildScrollView(
+            child: Padding(
               padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: _buildValueContent(detail),
-              ),
+              child: _isEditing && detail.type == 'string'
+                  ? TextField(
+                      controller: _valueController,
+                      maxLines: null,
+                      style: const TextStyle(fontFamily: 'monospace'),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter string value...',
+                      ),
+                    )
+                  : SizedBox(
+                      width: double.infinity,
+                      child: SingleChildScrollView(
+                        child: _buildValueContent(detail),
+                      ),
+                    ),
             ),
           ),
         ],
       );
 
+  // _buildValueDisplay
   Widget _buildValueContent(KeyDetail detail) {
     if (detail.value == null) {
       return const Text('nil', style: TextStyle(color: Colors.grey));
@@ -125,6 +215,7 @@ class KeyDetailPanel extends ConsumerWidget {
     if (detail.value is Map) {
       final map = detail.value as Map;
       if (map.isEmpty) return const Text('(Empty Hash)');
+      // TODO: change to dense_table
       return DataTable(
         columns: const [
           DataColumn(label: Text('Field')),
@@ -163,6 +254,9 @@ class KeyDetailPanel extends ConsumerWidget {
       );
     }
 
+    // if (detail.type == 'string') {}
+    // if (detail.value is String) {}
+
     // Default (String)
     return SelectableText(
       detail.value.toString(),
@@ -187,18 +281,6 @@ class KeyDetailPanel extends ConsumerWidget {
     }
   }
 
-  // =========
-  Widget _buildValueDisplay(KeyDetail detail) {
-    if (detail.value == null) {
-      return const Text('nil', style: TextStyle(color: Colors.grey));
-    }
-    if (detail.type == 'string') {
-      return SelectableText(detail.value.toString(),
-          style: const TextStyle(fontFamily: 'monospace', fontSize: 14));
-    }
-    return Text(detail.value.toString()); // Placeholder for other types
-  }
-
   Future<void> _handleEdit(KeyDetail detail) async {
     if (!_isEditing) {
       setState(() => _isEditing = true);
@@ -216,8 +298,13 @@ class KeyDetailPanel extends ConsumerWidget {
           .showSnackBar(const SnackBar(content: Text('Value updated!')));
 
       setState(() => _isEditing = false);
-      ref.refresh(
-          keyDetailProvider(detail.key)); // Refresh the UI to show new value
+
+      // Refresh the UI to show new value
+      // -- final newValue = ref.refresh(keyDetailProvider(detail.key));
+      // -- await ref.refresh(keyDetailProvider(detail.key).future);
+      // This resets the provider state, triggering a re-fetch in the build 
+      // method.
+      ref.invalidate(keyDetailProvider(detail.key));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
