@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0
+
+* **New Feature:** Key Management (CRUD)
+    * **Delete Keys:** Added ability to delete keys directly from the Value Inspector. Includes a confirmation dialog for safety.
+    * **Edit String Values:** Users can now modify and save values for `String` type keys.
+    * **Real-time Updates:** The UI automatically refreshes the key list and details upon successful modification or deletion.
+* **UI/UX Improvements**
+    * Added edit/save/cancel toggle mode in the Key Detail Panel.
+    * Improved error handling and user feedback (Snackbars) for write operations.
+* **CLI:** 
+    * Enhanced `Keyscope` CLI with (`ping`) and functions (connect, close, etc).
+    * Added `CLI_OPTIONS.md` to introduce the CLI commands and options.
+    * Added Commands: (`get` with `--key/-k` and `--value/-v`), (`set` with `--key/-k` and `--value/-v`), (`ping`), etc.
+    * Added Options: (`--get`), (`--set`), (`--slient`), (`--db`), (`--ssl`), etc.
+
 ## 0.3.1
 
 * **New CI Badge**: `GUI` and `CLI` build status badges for GitHub Actions workflows to `README.md`
@@ -7,11 +22,11 @@
 
 ## 0.3.0
 
-* **New Feature: Data Explorer**
+* **New Feature:** Data Explorer
     * Browse keys efficiently using `SCAN` command (cursor-based pagination).
     * Supports infinite scrolling for navigating millions of keys without blocking the server.
     * Search/Filter keys by pattern (e.g., `user:*`).
-* **New Feature: Value Inspector**
+* **New Feature:** Value Inspector
     * Inspect detailed key information including **Type** and **TTL**.
     * Dedicated visualizers for various data types:
         * **String:** Plain text viewer.
