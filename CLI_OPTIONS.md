@@ -31,6 +31,33 @@ OR
 keyscope get -k my_key
 ```
 
+## `json-set`
+
+Sets a JSON value.
+Required: `--path` (usually `$` for root).
+
+```sh
+keyscope json-set --key my_json_key --path "$" --value '{"name": "Alice", "age": 30}'
+```
+OR
+```sh
+keyscope json-set -k my_json_key -p "$" -v '{"name": "Alice", "age": 30}'
+```
+
+## `json-get`
+
+Gets a JSON value.
+
+```sh
+keyscope json-get --key my_json_key --path "$"
+# keyscope json-get --key user:100 --path '$.name'
+```
+OR
+```sh
+keyscope json-get -k my_json_key
+# (If path is omitted, default to "$")
+```
+
 # Options
 
 ## `--slient`
