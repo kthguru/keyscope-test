@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:keyscope/src/core/keyscope_client.dart';
@@ -30,6 +31,18 @@ void main(List<String> arguments) async {
   final getCommand = ArgParser()
     ..addOption('key',
         abbr: 'k', mandatory: true, help: '--key version \n=> return 9.0.0');
+
+  final jsonSetCommand = ArgParser()
+    ..addOption('key', abbr: 'k', mandatory: true, help: '--key my_json_key')
+    ..addOption('path', abbr: 'p', mandatory: true, help: r'--path "$"')
+    ..addOption('value',
+        abbr: 'v',
+        mandatory: true,
+        help: '--value \'{"name": "Alice", "age": 30}\'');
+
+  final jsonGetCommand = ArgParser()
+    ..addOption('key', abbr: 'k', mandatory: true, help: '--key my_json_key')
+    ..addOption('path', abbr: 'p', mandatory: true, help: r'--path "$"');
 
   // Check connectivity (PING/PONG)
   final pingCommand = ArgParser();
@@ -49,6 +62,8 @@ void main(List<String> arguments) async {
         help: 'Scan keys (Cursor-based iteration)', negatable: false)
     ..addCommand('set', setCommand)
     ..addCommand('get', getCommand)
+    ..addCommand('json-set', jsonSetCommand)
+    ..addCommand('json-get', jsonGetCommand)
     ..addCommand('ping', pingCommand)
     ..addMultiOption('set', help: '--set <key> <value>')
     ..addMultiOption('get', help: '--get <key>')
@@ -108,6 +123,17 @@ void main(List<String> arguments) async {
         case 'get':
           final key = results.command?['key'] as String;
           await get(valkeyClient, key);
+          break;
+        case 'json-set':
+          final key = results.command?['key'] as String;
+          final path = results.command?['path'] as String;
+          final value = results.command?['value'] as String; // as dynamic;
+          await jsonSet(valkeyClient, key: key, path: path, data: value);
+          break;
+        case 'json-get':
+          final key = results.command?['key'] as String;
+          final path = results.command?['path'] as String;
+          await jsonGet(valkeyClient, key: key, path: path);
           break;
         case 'scan':
           break;
@@ -239,6 +265,19 @@ Future<String?> get(ValkeyClient client, String key) async {
 Future<void> set(ValkeyClient client, String key, String value) async {
   logger.info('SET: key: $key, value: $value');
   await client.set(key, value); // unawaited(client.set(key, value));
+}
+
+Future<dynamic> jsonGet(ValkeyClient client,
+    {required String key, String path = r'$'}) async {
+  final value = await client.jsonGet(key, path);
+  logger.info('GET: key: $key, path: $path, value: $value');
+  return value;
+}
+
+Future<void> jsonSet(ValkeyClient client,
+    {required String key, String path = r'$', required String data}) async {
+  logger.info('SET: key: $key, path: $path, data: $data');
+  await client.jsonSet(key: key, path: path, data: jsonDecode(data));
 }
 
 // ⚠️ When no command specified:
