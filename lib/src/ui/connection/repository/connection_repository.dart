@@ -209,12 +209,11 @@ class BasicConnectionRepository implements ConnectionRepository {
           break;
         case 'list':
           // Get full list (warning: large lists should be paginated in v0.4.0)
-          // value = await _client!.execute(['LRANGE', key, '0', '-1']);
+          // execute(['LRANGE', key, '0', '-1']);
           value = await _client!.lrange(key, 0, -1);
           break;
         case 'set':
-          // value = await _client!.execute(['SMEMBERS', key]);
-          value = await _client!.smembers(key);
+          value = await _client!.smembers(key); // execute(['SMEMBERS', key]);
           break;
         case 'zset':
           // Get list with scores
