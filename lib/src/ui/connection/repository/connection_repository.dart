@@ -222,6 +222,8 @@ class BasicConnectionRepository implements ConnectionRepository {
           // TODO: change execute to zrange
           // await _client!.zrange(key, 0, -1);
           break;
+        case 'ReJSON-RL':
+          value = await _client!.jsonGet(key);
         default:
           value = 'Unsupported type: $type';
       }
