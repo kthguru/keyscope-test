@@ -87,6 +87,13 @@ abstract class ConnectionRepository {
   Future<void> deleteKey(String key) async => {};
   Future<void> setStringValue(String key, String value, {int? ttl}) async => {};
 
+  Future<void> createKey(
+          {required String key,
+          required String type,
+          required dynamic value,
+          int? ttl}) async =>
+      {};
+
   /// Scans keys incrementally to avoid blocking the server.
   /// [cursor]: The cursor to start from (use '0' for the start).
   /// [match]: The pattern to match (default '*').
@@ -344,6 +351,81 @@ class BasicConnectionRepository implements ConnectionRepository {
     }
 
     // return _client.scanKeys(cursor: cursor, match: match, count: count);
+  }
+
+  /// Create a new key with an initial value.
+  /// [type]: 'string', 'hash', 'list', 'set', 'zset'
+  /// [value]: Depends on type.
+  ///   - string: String
+  ///   - hash: `Map<String, String>` (at least one field-value)
+  ///   - list: String (initial item)
+  ///   - set: String (initial member)
+  ///   - zset: `Map<String, num>` (member -> score)
+  @override
+  Future<void> createKey({
+    required String key,
+    required String type,
+    required dynamic value,
+    int? ttl,
+  }) async {
+    if (_client == null) throw Exception('Not connected');
+
+    // 1. Create Key based on Type
+    switch (type) {
+      case 'string':
+        // execute(['SET', key, value.toString()]);
+        await _client!.set(key, value.toString());
+        break;
+
+      case 'hash':
+        // HSET key field value
+        if (value is! Map || value.isEmpty) {
+          throw Exception('Hash requires at least one field-value');
+        }
+        final args = ['HSET', key];
+        value.forEach((f, v) {
+          // value as Map
+          args.add(f.toString());
+          args.add(v.toString());
+        });
+        await _client!.execute(args);
+        // TODO: change to hset()
+        break;
+
+      case 'list':
+        // RPUSH key item
+        // execute(['RPUSH', key, value.toString()]);
+        await _client!.rpush(key, value.toString());
+        break;
+
+      case 'set':
+        // SADD key member
+        // await _client!.execute(['SADD', key, value.toString()]);
+        await _client!.sadd(key, value.toString());
+        break;
+
+      case 'zset':
+        // ZADD key score member
+        if (value is! Map || value.isEmpty) {
+          throw Exception('ZSet requires score and member');
+        }
+        // value map: { "member": score }
+        final entry = value.entries.first; // value as Map
+        await _client!.execute(
+            ['ZADD', key, entry.value.toString(), entry.key.toString()]);
+        // await _client!.zadd(key, entry.value as double, entry.key.toString());
+        // TODO: change to zadd() / check zset
+        break;
+
+      default:
+        throw Exception('Unsupported type: $type');
+    }
+
+    // 2. Set TTL if provided
+    if (ttl != null && ttl > 0) {
+      // execute(['EXPIRE', key, ttl.toString()]);
+      await _client!.expire(key, ttl);
+    }
   }
 
   @override
