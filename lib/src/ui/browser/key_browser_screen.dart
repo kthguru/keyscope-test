@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'dialog/create_key_dialog.dart';
 import 'key_detail_panel.dart';
 import 'logic/key_browser_provider.dart';
 
@@ -67,6 +68,29 @@ class _KeyBrowserScreenState extends ConsumerState<KeyBrowserScreen> {
                     .refresh(pattern: _searchController.text);
               }),
         ],
+      ),
+      // Add Floating Action Button
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final success = await showDialog<bool>(
+            context: context,
+            builder: (context) => const CreateKeyDialog(),
+          );
+
+          if (success ?? false) {
+            // Refresh list on success
+            await ref.read(keyBrowserProvider.notifier).refresh();
+
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Key created successfully!'),
+                  backgroundColor: Colors.green),
+            );
+          }
+        },
+        tooltip: 'Create New Key',
+        child: const Icon(Icons.add),
       ),
       body: Row(
         children: [
