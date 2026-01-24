@@ -200,6 +200,7 @@ void main(List<String> arguments) async {
           } else {
             showUsages(parser);
           }
+          break;
       }
     } on FormatException catch (e) {
       logger.info(e.message);
@@ -291,4 +292,36 @@ void showUsages(ArgParser parser) {
   });
   print('\nOptions:');
   print(parser.usage);
+}
+
+Future<void> scan(
+    ValkeyClient client, String? match, int? count, String? type) async {
+  logger.info('🔍 Scanning keys (MATCH: "$match", COUNT: 20)...');
+
+  final result =
+      await client.scan(cursor: '0', match: match ?? '*', count: count ?? 20);
+
+  // logger.info('----------------------------------------');
+  // logger.info('Next Cursor : ${result.cursor}');
+  // logger.info('Found Keys  : ${result.keys.length}');
+  // logger.info('----------------------------------------');
+  logger.info('Found ${result.keys.length} keys. '
+      'Next cursor: ${result.cursor}');
+
+  if (result.keys.isEmpty) {
+    logger.info('(No keys found)');
+  } else {
+    for (var key in result.keys) {
+      logger.info('- $key');
+    }
+  }
+
+  if (result.cursor == '0') {
+    logger.info('----------------------------------------');
+    logger.info('✅ Full iteration completed (Cursor returned to 0).');
+  } else {
+    logger.info('----------------------------------------');
+    logger.info('👉 More keys available. '
+        'Use cursor "${result.cursor}" to continue.');
+  }
 }
