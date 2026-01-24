@@ -162,6 +162,10 @@ void main(List<String> arguments) async {
           await jsonGet(valkeyClient, key: key, path: path);
           break;
         case 'scan':
+          final match = results.command?['match'] as String? ?? '*';
+          final count = results.command?['count'] as int? ?? 20;
+          final type = results.command?['type'] as String? ?? '';
+          await scan(valkeyClient, match, count, type);
           break;
         default:
           // Handle Options
