@@ -20,12 +20,6 @@ library;
 
 import 'package:valkey_client/valkey_client.dart';
 
-class ScanResult {
-  final String cursor;
-  final List<String> keys;
-  ScanResult(this.cursor, this.keys);
-}
-
 class KeyscopeClient {
   ValkeyClient? _client;
 
@@ -51,38 +45,13 @@ class KeyscopeClient {
     _client = newClient;
   }
 
-  // TODO: Same with `ui`. Need to dedup and use valkey_client.
   Future<ScanResult> scanKeys({
     required String cursor,
     String match = '*',
     int count = 100,
   }) async {
     if (_client == null) throw Exception('Not connected');
-
-    try {
-      // Execute SCAN command: SCAN <cursor> MATCH <pattern> COUNT <count>
-      final result = await _client!
-          .execute(['SCAN', cursor, 'MATCH', match, 'COUNT', count.toString()]);
-      // TODO: add these to valkey_client
-
-      // Result is typically a list: [nextCursor, [key1, key2, ...]]
-      if (result is List && result.length == 2) {
-        final nextCursor = result[0].toString();
-        final rawKeys = result[1];
-
-        var keys = <String>[];
-        if (rawKeys is List) {
-          keys = rawKeys.map((e) => e.toString()).toList();
-        }
-
-        return ScanResult(nextCursor, keys);
-      } else {
-        throw Exception('Unexpected SCAN response format');
-      }
-    } catch (e) {
-      print('❌ [OSS] Failed to SCAN keys: $e');
-      rethrow;
-    }
+    return _client!.scan(cursor: cursor, match: match, count: count);
   }
 
   Future<void> disconnect() async {

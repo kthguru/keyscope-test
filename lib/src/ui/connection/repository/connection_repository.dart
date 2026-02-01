@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valkey_client/valkey_client.dart';
 
@@ -33,14 +35,6 @@ class KeyDetail {
     required this.ttl,
     this.value,
   });
-}
-
-/// A DTO to hold the result of a SCAN operation.
-class ScanResult {
-  final String cursor;
-  final List<String> keys;
-
-  ScanResult(this.cursor, this.keys);
 }
 
 /// Abstract class defining the contract for connection operations.
@@ -208,35 +202,26 @@ class BasicConnectionRepository implements ConnectionRepository {
     try {
       switch (type) {
         case 'string':
-          // value = await _client!.execute(['GET', key]);
           value = await _client!.get(key);
           break;
         case 'hash':
-          // Returns list [key, val, key, val...] -> Convert to Map
-          final res = await _client!.execute(['HGETALL', key]);
-          // final res = await _client!.hgetall(key);
-          // TODO: change execute to hgetall
-          if (res is List) {
-            final map = <String, String>{};
-            for (var i = 0; i < res.length; i += 2) {
-              map[res[i].toString()] = res[i + 1].toString();
-            }
-            value = map;
-          }
+          final res = await _client!.hGetAll(key);
+          value = Map<String, String>.from(res);
           break;
         case 'list':
           // Get full list (warning: large lists should be paginated in v0.4.0)
-          // execute(['LRANGE', key, '0', '-1']);
-          value = await _client!.lrange(key, 0, -1);
+          value = await _client!
+              .lrange(key, 0, -1); // TODO: add lRange to valkey_client
           break;
         case 'set':
-          value = await _client!.smembers(key); // execute(['SMEMBERS', key]);
+          value = await _client!
+              .smembers(key); // TODO: add sMembers to valkey_client
           break;
         case 'zset':
           // Get list with scores
           value =
               await _client!.execute(['ZRANGE', key, '0', '-1', 'WITHSCORES']);
-          // TODO: change execute to zrange
+          // TODO: change execute to zRange
           // await _client!.zrange(key, 0, -1);
           break;
         case 'ReJSON-RL':
@@ -248,7 +233,6 @@ class BasicConnectionRepository implements ConnectionRepository {
       value = 'Error fetching value: $e';
     }
 
-    // return KeyDetail(key: key, type: type, ttl: ttl, value: value);
     return KeyDetail(key: key, type: type, ttl: ttl, value: value);
   }
 
@@ -326,7 +310,6 @@ class BasicConnectionRepository implements ConnectionRepository {
 
   // TODO: Add update methods for Hash, List, Set, etc. here.
 
-  // TODO: Same with `core`. Need to dedup and use valkey_client.
   @override
   Future<ScanResult> scanKeys({
     required String cursor,
@@ -334,33 +317,7 @@ class BasicConnectionRepository implements ConnectionRepository {
     int count = 100,
   }) async {
     if (_client == null) throw Exception('Not connected');
-
-    try {
-      // Execute SCAN command: SCAN <cursor> MATCH <pattern> COUNT <count>
-      final result = await _client!
-          .execute(['SCAN', cursor, 'MATCH', match, 'COUNT', count.toString()]);
-      // TODO: add these to valkey_client
-
-      // Result is typically a list: [nextCursor, [key1, key2, ...]]
-      if (result is List && result.length == 2) {
-        final nextCursor = result[0].toString();
-        final rawKeys = result[1];
-
-        var keys = <String>[];
-        if (rawKeys is List) {
-          keys = rawKeys.map((e) => e.toString()).toList();
-        }
-
-        return ScanResult(nextCursor, keys);
-      } else {
-        throw Exception('Unexpected SCAN response format');
-      }
-    } catch (e) {
-      print('❌ [OSS] Failed to SCAN keys: $e');
-      rethrow;
-    }
-
-    // return _client.scanKeys(cursor: cursor, match: match, count: count);
+    return _client!.scan(cursor: cursor, match: match, count: count);
   }
 
   /// Create a new key with an initial value.
@@ -392,14 +349,14 @@ class BasicConnectionRepository implements ConnectionRepository {
         if (value is! Map || value.isEmpty) {
           throw Exception('Hash requires at least one field-value');
         }
-        final args = ['HSET', key];
-        value.forEach((f, v) {
-          // value as Map
-          args.add(f.toString());
-          args.add(v.toString());
-        });
-        await _client!.execute(args);
-        // TODO: change to hset()
+        // final args = ['HSET', key];
+        // value.forEach((f, v) {
+        //   // value as Map
+        //   args.add(f.toString());
+        //   args.add(v.toString());
+        // });
+        // await _client!.execute(args);
+        await _client!.hSet(key, value as Map<String, String>);
         break;
 
       case 'list':
@@ -459,19 +416,17 @@ class BasicConnectionRepository implements ConnectionRepository {
 
   /// Set a field in a Hash.
   @override
-  Future<void> setHashField(String key, String field, String value) async {
+  Future<int> setHashField(String key, String field, String value) async {
     if (_client == null) throw Exception('Not connected');
-    // await _client!.execute(['HSET', key, field, value]);
-    await _client!.hset(key, field, value);
+    return _client!.hSet(key, {field: value}); // changed counts
   }
 
   /// Delete a field from a Hash.
   @override
-  Future<void> deleteHashField(String key, String field) async {
+  Future<int> deleteHashField(String key, String field) async {
     if (_client == null) throw Exception('Not connected');
-    await _client!.execute(['HDEL', key, field]);
-    // TODO: add to valkey_client
-    // await _client!.hdel(key, field);
+    await _client!.hDel(key, [field]);
+    return _client!.hDel(key, [field]); // deleted counts
   }
 
   // --- List Operations ---
@@ -490,7 +445,7 @@ class BasicConnectionRepository implements ConnectionRepository {
     if (_client == null) throw Exception('Not connected');
     await _client!.execute(['LSET', key, index.toString(), value]);
     // TODO: add to valkey_client
-    // await _client!.lset(key, index.toString(), value);
+    // await _client!.lSet(key, index.toString(), value);
   }
 
   /// Remove items from a List.
