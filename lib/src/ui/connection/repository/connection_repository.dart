@@ -111,7 +111,7 @@ abstract class ConnectionRepository {
   Future<void> removeListValue(String key, String value) async {}
   Future<void> addSetMember(String key, String member) async {}
   Future<void> removeSetMember(String key, String member) async {}
-  Future<void> addZSetMember(String key, num score, String member) async {}
+  Future<void> addZSetMember(String key, double score, String member) async {}
   Future<void> removeZSetMember(String key, String member) async {}
 }
 
@@ -134,7 +134,7 @@ class BasicConnectionRepository implements ConnectionRepository {
     String? username,
     String? password,
   }) async {
-    print('🔌 [OSS] Connecting to $host:$port using valkey_client...');
+    print('🔌 Connecting to $host:$port using valkey_client...');
 
     // valkey_client supports 3 authentication modes via settings:
     // - No Auth
@@ -167,14 +167,12 @@ class BasicConnectionRepository implements ConnectionRepository {
 
       // 4. Store the active client on success
       _client = newClient;
-      print('✅ [OSS] Connected successfully to $host:$port');
+      print('✅ Connected successfully to $host:$port');
 
-      // (Optional) Test command using 'execute' (NOT 'send')
-      // final response = await newClient.execute(['PING']);
       final response = await newClient.ping();
       print('🏓 PING response: $response');
     } catch (e) {
-      print('❌ [OSS] Connection failed: $e');
+      print('❌ Connection failed: $e');
       // Cleanup if connection failed
       await newClient.close();
 
@@ -193,9 +191,7 @@ class BasicConnectionRepository implements ConnectionRepository {
     final type = typeRes.toString(); // "string", "hash", etc.
 
     // 2. Get TTL
-    // final ttlRes = await _client!.execute(['TTL', key]);
-    // final ttl = (ttlRes is int) ? ttlRes : -1;
-    final ttl = await _client!.ttl(key);
+    final ttl = await _client!.ttl(key); // -1
 
     // 3. Get Value based on Type
     dynamic value;
@@ -210,12 +206,10 @@ class BasicConnectionRepository implements ConnectionRepository {
           break;
         case 'list':
           // Get full list (warning: large lists should be paginated in v0.4.0)
-          value = await _client!
-              .lrange(key, 0, -1); // TODO: add lRange to valkey_client
+          value = await _client!.lrange(key, 0, -1);
           break;
         case 'set':
-          value = await _client!
-              .smembers(key); // TODO: add sMembers to valkey_client
+          value = await _client!.smembers(key);
           break;
         case 'zset':
           // Get list with scores
@@ -251,7 +245,7 @@ class BasicConnectionRepository implements ConnectionRepository {
       // Parse the INFO string into a Map
       return _parseInfo(result.toString());
     } catch (e) {
-      print('❌ [OSS] Failed to fetch INFO: $e');
+      print('❌ Failed to fetch INFO: $e');
       rethrow;
     }
   }
@@ -286,8 +280,7 @@ class BasicConnectionRepository implements ConnectionRepository {
   @override
   Future<void> deleteKey(String key) async {
     if (_client == null) throw Exception('Not connected');
-    // await _client!.execute(['DEL', key]);
-    await _client!.del(key);
+    await _client!.del([key]);
   }
 
   /// Update the value of a String type key.
@@ -296,14 +289,10 @@ class BasicConnectionRepository implements ConnectionRepository {
   Future<void> setStringValue(String key, String value, {int? ttl}) async {
     if (_client == null) throw Exception('Not connected');
 
-    // SET key value
-    // Execute SET command
-    // await _client!.execute(['SET', key, value]);
     await _client!.set(key, value);
 
     // Restore TTL if it was set
     if (ttl != null && ttl > 0) {
-      // await _client!.execute(['EXPIRE', key, ttl.toString()]);
       await _client!.expire(key, ttl);
     }
   }
@@ -340,7 +329,6 @@ class BasicConnectionRepository implements ConnectionRepository {
     // 1. Create Key based on Type
     switch (type) {
       case 'string':
-        // execute(['SET', key, value.toString()]);
         await _client!.set(key, value.toString());
         break;
 
@@ -360,14 +348,10 @@ class BasicConnectionRepository implements ConnectionRepository {
         break;
 
       case 'list':
-        // RPUSH key item
-        // execute(['RPUSH', key, value.toString()]);
         await _client!.rpush(key, value.toString());
         break;
 
       case 'set':
-        // SADD key member
-        // await _client!.execute(['SADD', key, value.toString()]);
         await _client!.sadd(key, value.toString());
         break;
 
@@ -378,11 +362,7 @@ class BasicConnectionRepository implements ConnectionRepository {
         }
         // value map: { "member": score }
         final entry = value.entries.first; // value as Map
-        await _client!.execute(
-            ['ZADD', key, entry.value.toString(), entry.key.toString()]);
-        // await _client!.zadd(
-        //     key, entry.value as double, entry.key.toString());
-        // TODO: change to zadd() / check zset
+        await _client!.zadd(key, entry.value as double, entry.key.toString());
         break;
 
       default:
@@ -391,7 +371,6 @@ class BasicConnectionRepository implements ConnectionRepository {
 
     // 2. Set TTL if provided
     if (ttl != null && ttl > 0) {
-      // execute(['EXPIRE', key, ttl.toString()]);
       await _client!.expire(key, ttl);
     }
   }
@@ -401,7 +380,7 @@ class BasicConnectionRepository implements ConnectionRepository {
     if (_client != null) {
       await _client!.close();
       _client = null;
-      print('🔌 [OSS] Disconnected.');
+      print('🔌 Disconnected.');
     }
   }
 
@@ -435,7 +414,6 @@ class BasicConnectionRepository implements ConnectionRepository {
   @override
   Future<void> addListItem(String key, String value) async {
     if (_client == null) throw Exception('Not connected');
-    // await _client!.execute(['RPUSH', key, value]);
     await _client!.rpush(key, value);
   }
 
@@ -464,7 +442,6 @@ class BasicConnectionRepository implements ConnectionRepository {
   @override
   Future<void> addSetMember(String key, String member) async {
     if (_client == null) throw Exception('Not connected');
-    // await _client!.execute(['SADD', key, member]);
     await _client!.sadd(key, member);
   }
 
@@ -472,7 +449,6 @@ class BasicConnectionRepository implements ConnectionRepository {
   @override
   Future<void> removeSetMember(String key, String member) async {
     if (_client == null) throw Exception('Not connected');
-    // await _client!.execute(['SREM', key, member]);
     await _client!.srem(key, member);
   }
 
@@ -480,17 +456,15 @@ class BasicConnectionRepository implements ConnectionRepository {
 
   /// Add or Update a member in a ZSet.
   @override
-  Future<void> addZSetMember(String key, num score, String member) async {
+  Future<void> addZSetMember(String key, double score, String member) async {
     if (_client == null) throw Exception('Not connected');
-    // await _client!.execute(['ZADD', key, score.toString(), member]);
-    await _client!.zadd(key, score.toDouble(), member);
+    await _client!.zadd(key, score, member);
   }
 
   /// Remove a member from a ZSet.
   @override
   Future<void> removeZSetMember(String key, String member) async {
     if (_client == null) throw Exception('Not connected');
-    // await _client!.execute(['ZREM', key, member]);
     await _client!.zrem(key, member);
   }
 }
