@@ -111,7 +111,7 @@ abstract class ConnectionRepository {
   Future<void> removeListValue(String key, String value) async {}
   Future<void> addSetMember(String key, String member) async {}
   Future<void> removeSetMember(String key, String member) async {}
-  Future<void> addZSetMember(String key, double score, String member) async {}
+  Future<void> addZSetMember(String key, num score, String member) async {}
   Future<void> removeZSetMember(String key, String member) async {}
 }
 
@@ -186,8 +186,7 @@ class BasicConnectionRepository implements ConnectionRepository {
     if (_client == null) throw Exception('Not connected');
 
     // 1. Get Type
-    final typeRes = await _client!.execute(['TYPE', key]);
-    // TODO: add type() to valkey_client
+    final typeRes = await _client!.type(key);
     final type = typeRes.toString(); // "string", "hash", etc.
 
     // 2. Get TTL
@@ -206,17 +205,18 @@ class BasicConnectionRepository implements ConnectionRepository {
           break;
         case 'list':
           // Get full list (warning: large lists should be paginated in v0.4.0)
-          value = await _client!.lrange(key, 0, -1);
+          value = await _client!.lRange(key, 0, -1);
           break;
         case 'set':
           value = await _client!.smembers(key);
+          // TODO: change to sMembers
           break;
         case 'zset':
           // Get list with scores
           value =
               await _client!.execute(['ZRANGE', key, '0', '-1', 'WITHSCORES']);
-          // TODO: change execute to zRange
           // await _client!.zrange(key, 0, -1);
+          // TODO: change execute to zRange
           break;
         case 'ReJSON-RL':
           value = await _client!.jsonGet(key: key);
@@ -237,10 +237,7 @@ class BasicConnectionRepository implements ConnectionRepository {
     }
 
     try {
-      // Execute INFO command
-      // Assuming 'execute' returns the raw RESP response (String or BulkString)
-      final result = await _client!.execute(['INFO']);
-      // TODO: add info() to valkey_client
+      final result = await _client!.info();
 
       // Parse the INFO string into a Map
       return _parseInfo(result.toString());
@@ -348,10 +345,11 @@ class BasicConnectionRepository implements ConnectionRepository {
         break;
 
       case 'list':
-        await _client!.rpush(key, value.toString());
+        await _client!.rPush(key, [value.toString()]);
         break;
 
       case 'set':
+        // TODO: change to sAdd
         await _client!.sadd(key, value.toString());
         break;
 
@@ -421,9 +419,7 @@ class BasicConnectionRepository implements ConnectionRepository {
   @override
   Future<void> updateListItem(String key, int index, String value) async {
     if (_client == null) throw Exception('Not connected');
-    await _client!.execute(['LSET', key, index.toString(), value]);
-    // TODO: add to valkey_client
-    // await _client!.lSet(key, index.toString(), value);
+    await _client!.lSet(key, index, value);
   }
 
   /// Remove items from a List.
@@ -431,9 +427,7 @@ class BasicConnectionRepository implements ConnectionRepository {
   @override
   Future<void> removeListValue(String key, String value) async {
     if (_client == null) throw Exception('Not connected');
-    await _client!.execute(['LREM', key, '0', value]);
-    // TODO: add to valkey_client
-    // await _client!.lrem(key, '0', value);
+    await _client!.lRem(key, 0, value);
   }
 
   // --- Set Operations ---
@@ -442,6 +436,7 @@ class BasicConnectionRepository implements ConnectionRepository {
   @override
   Future<void> addSetMember(String key, String member) async {
     if (_client == null) throw Exception('Not connected');
+    // TODO: change to sAdd
     await _client!.sadd(key, member);
   }
 
@@ -449,6 +444,7 @@ class BasicConnectionRepository implements ConnectionRepository {
   @override
   Future<void> removeSetMember(String key, String member) async {
     if (_client == null) throw Exception('Not connected');
+    // TODO: change to sRem
     await _client!.srem(key, member);
   }
 
@@ -456,15 +452,17 @@ class BasicConnectionRepository implements ConnectionRepository {
 
   /// Add or Update a member in a ZSet.
   @override
-  Future<void> addZSetMember(String key, double score, String member) async {
+  Future<void> addZSetMember(String key, num score, String member) async {
     if (_client == null) throw Exception('Not connected');
-    await _client!.zadd(key, score, member);
+    // TODO: change to zAdd
+    await _client!.zadd(key, score.toDouble(), member);
   }
 
   /// Remove a member from a ZSet.
   @override
   Future<void> removeZSetMember(String key, String member) async {
     if (_client == null) throw Exception('Not connected');
+    // TODO: change to zRem
     await _client!.zrem(key, member);
   }
 }
