@@ -37,14 +37,6 @@ assets/icons
 assets/images
 test/widget_test.dart
 
-# No docs
-PREFLIGHT.md
-CONTRIBUTING.md
-analysis_options.yaml
-
-# No CLI docs
-CLI.md
-
 # No setup
 setup.dart
 
@@ -60,3 +52,12 @@ devtools_options.yaml
 
 # Ignore generated files for multilingual
 lib/i18n.dart
+
+# No docs
+PREFLIGHT.md
+CONTRIBUTING.md
+analysis_options.yaml
+/docs/
+
+# No CLI docs
+CLI.md
