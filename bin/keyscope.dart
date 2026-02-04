@@ -155,7 +155,7 @@ void main(List<String> arguments) async {
         database: db,
       );
 
-      valkeyClient = TRClient.fromSettings(settings);
+      trClient = TRClient.fromSettings(settings);
 
       // Connect
       await connect(trClient);
