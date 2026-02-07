@@ -39,10 +39,35 @@ class _ConnectionDialogState extends ConsumerState<ConnectionDialog> {
   late ConnectionConfig _selectedConfig;
   final _formKey = GlobalKey<FormState>();
 
+  late TextEditingController _nameController;
+  late TextEditingController _hostController;
+  late TextEditingController _portController;
+  late TextEditingController _usernameController;
+  late TextEditingController _passwordController;
+
   @override
   void initState() {
     super.initState();
     _selectedConfig = _savedConnections.first;
+
+    _nameController = TextEditingController(text: _selectedConfig.name);
+    _hostController = TextEditingController(text: _selectedConfig.host);
+    _portController =
+        TextEditingController(text: _selectedConfig.port.toString());
+    _usernameController =
+        TextEditingController(text: _selectedConfig.username ?? '');
+    _passwordController =
+        TextEditingController(text: _selectedConfig.password ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _hostController.dispose();
+    _portController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -151,26 +176,24 @@ class _ConnectionDialogState extends ConsumerState<ConnectionDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionHeader('General'),
-                    _buildTextField('Name', _selectedConfig.name),
+                    _buildTextField('Name', _nameController),
                     const SizedBox(height: 16),
                     _buildSectionHeader('Connection Details'),
                     Row(
                       children: [
                         Expanded(
                             flex: 3,
-                            child:
-                                _buildTextField('Host', _selectedConfig.host)),
+                            child: _buildTextField('Host', _hostController)),
                         const SizedBox(width: 16),
                         Expanded(
                             flex: 1,
-                            child: _buildTextField(
-                                'Port', _selectedConfig.port.toString())),
+                            child: _buildTextField('Port', _portController)),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField('Username', _selectedConfig.username ?? ''),
+                    _buildTextField('Username', _usernameController),
                     const SizedBox(height: 16),
-                    _buildTextField('Password', _selectedConfig.password ?? '',
+                    _buildTextField('Password', _passwordController,
                         obscureText: true),
                     const SizedBox(height: 24),
                     _buildSectionHeader('Advanced'),
@@ -214,8 +237,6 @@ class _ConnectionDialogState extends ConsumerState<ConnectionDialog> {
                     const SizedBox(width: 12),
                     FilledButton(
                       onPressed: () async {
-                        final repo = ref.read(connectionRepositoryProvider);
-
                         try {
                           // 1. Show loading indicator
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -224,13 +245,7 @@ class _ConnectionDialogState extends ConsumerState<ConnectionDialog> {
                                 duration: Duration(milliseconds: 500)),
                           );
 
-                          // 2. Connect
-                          await repo.connect(
-                            host: _selectedConfig.host,
-                            port: _selectedConfig.port,
-                            username: _selectedConfig.username,
-                            password: _selectedConfig.password,
-                          );
+                          await _connectToRepo();
 
                           if (!mounted) return;
 
@@ -270,7 +285,7 @@ class _ConnectionDialogState extends ConsumerState<ConnectionDialog> {
         ),
       );
 
-  Widget _buildTextField(String label, String initialValue,
+  Widget _buildTextField(String label, TextEditingController controller,
           {bool obscureText = false}) =>
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +294,7 @@ class _ConnectionDialogState extends ConsumerState<ConnectionDialog> {
               style: const TextStyle(fontSize: 12, color: Color(0xFFBBBBBB))),
           const SizedBox(height: 6),
           TextFormField(
-            initialValue: initialValue,
+            controller: controller,
             obscureText: obscureText,
             style: const TextStyle(fontSize: 13),
             decoration: const InputDecoration(
@@ -296,14 +311,44 @@ class _ConnectionDialogState extends ConsumerState<ConnectionDialog> {
         ],
       );
 
-  Future<void> _testConnection() async {
+  /// Update _selectedConfig with sanitized values from controllers.
+  /// NOTE: All inputs are trimmed to avoid leading/trailing whitespace issues.
+  void _updateSelectedConfigFromControllers() {
+    _selectedConfig.name = _sanitize(_nameController.text.trim());
+    _selectedConfig.host = _sanitize(_hostController.text.trim());
+    _selectedConfig.port =
+        int.tryParse(_sanitize(_portController.text.trim())) ?? 0;
+    _selectedConfig.username = _sanitize(_usernameController.text.trim());
+    // NOTE: Always trim the password input.
+    // Without trimming, leading/trailing spaces may cause authentication mismatches.
+    _selectedConfig.password = _sanitize(_passwordController.text.trim());
+  }
+
+  /// Helper function to remove all leading/trailing whitespace characters.
+  /// This covers normal spaces, tabs, newlines, non-breaking spaces,
+  /// full-width spaces, etc.
+  String _sanitize(String input) => input.replaceAll(RegExp(r'^\s+|\s+$'), '');
+
+  Future<void> _connectToRepo() async {
+    _updateSelectedConfigFromControllers();
+
     final repo = ref.read(connectionRepositoryProvider);
 
+    return repo.connect(
+      host: _selectedConfig.host,
+      port: _selectedConfig.port,
+      // NOTE: If the username is empty (length == 0),
+      // defaulting to "default" is required for proper authentication.
+      username: _selectedConfig.username?.isEmpty ?? true
+          ? 'default'
+          : _selectedConfig.username,
+      password: _selectedConfig.password,
+    );
+  }
+
+  Future<void> _testConnection() async {
     try {
-      await repo.connect(
-        host: _selectedConfig.host,
-        port: _selectedConfig.port,
-      );
+      await _connectToRepo();
 
       if (!mounted) return;
 
