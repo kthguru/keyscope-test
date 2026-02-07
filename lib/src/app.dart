@@ -18,12 +18,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../i18n.dart' show I18nDelegate; // TODO: Add i18n to show in v0.7.0
+import '../i18n.dart' show I18n, I18nDelegate;
+
 import 'providers/language_provider.dart';
 import 'ui/connection/connection_dialog.dart';
-import 'ui/connection/repository/connection_repository.dart';
-// TODO: Uncomment the line below in v0.7.0
-// import 'ui/widgets/language_widget.dart' show AdvancedLanguageSelectorSheet;
+import 'ui/connection/repository/connection_repository.dart'
+    show connectionRepositoryProvider;
+import 'ui/widgets/language_widget.dart' show AdvancedLanguageSelectorSheet;
 
 /// The root widget of the application.
 /// Responsible for setting up the MaterialApp, Theme, and Routing.
@@ -85,7 +86,8 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the injected repository implementation.
-    final repo = ref.watch(connectionRepositoryProvider);
+    // final repo =
+    ref.watch(connectionRepositoryProvider);
 
     return Scaffold(
       body: Center(
@@ -94,11 +96,16 @@ class HomeScreen extends ConsumerWidget {
           children: [
             const Text(
               'Keyscope',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+            ),
+            // TODO: No need to show if current language is English
+            Text(
+              I18n.of(context).keyscope,
+              style: const TextStyle(fontSize: 24, color: Colors.blueGrey),
             ),
             const SizedBox(height: 20),
-            // Should print 'false' in OSS version.
-            Text('SSH Supported: ${repo.isSshSupported}'),
+            // TODO: add ssh tunneling
+            // Text('SSH Supported: ${repo.isSshSupported}'),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: () {
@@ -108,8 +115,7 @@ class HomeScreen extends ConsumerWidget {
                   builder: (context) => const ConnectionDialog(),
                 );
               },
-              // child: const Text('Test Connection'),
-              child: const Text('Open Connection Manager'),
+              child: Text(I18n.of(context).openConnectionManager),
             ),
 
             // TODO: ThemeCycleIconButton
