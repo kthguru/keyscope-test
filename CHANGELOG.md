@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.6.0
+* **Multilingual:** Added Internationalization (i18n) with full multi-language support.
 * **Connection Dialog & Test Connection**
     * **Enhanced** Implemented full `TextEditingController` support for all form fields (name, host, port, username, password).
       * Dialog now correctly captures and applies user-entered values.
@@ -16,7 +17,7 @@
 * **CLI:**
     * **New Commands**: (`scan`) as a generic command for Redis and Valkey
 * **Core Engine**
-    * **TypeRedis**: Bump version to `3.8.0`.
+    * **TypeRedis**: Bump version to `3.8.1`.
 
 ## 0.5.0
 
